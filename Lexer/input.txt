@@ -1,0 +1,28 @@
+123
+1
+12345
+123.456
+123.4.56
+if else while for read write return int float void main string char;
+string str = "        /*   */  //     ";
+float fl = 2.5;
+fl = 0xF12A;
+
+/*
+
+int main(int[] args) //   asd 
+{
+	string str = "          //     ";
+	int id = 1;
+	int idBin = 0b01001;
+	char ch = "a";
+	float fl = 2.5;
+	fl = fl + 12 / 4;
+	if (id <= fl || fl > 0xF12A)
+	{
+		int ch = 123;
+		string;
+	
+	}
+	string 1error;
+}
