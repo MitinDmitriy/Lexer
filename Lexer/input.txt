@@ -1,20 +1,30 @@
-string str = "        /*   */  //     ";
-float fl = 2.5;
-fl = 0xF12A;
+2E-
+2E-1
+2E-10
+2.1E+
+2.213E+12345
+float fl = 2.5E+10; //TODO
+
+
 
 int main(int[] args) //   asd 
 {
-	string str = "   /* */        //     ";
+	float fl = 2.5;
+	fl = 0xF12A;
+	string str = "   */        //    ";
 	int id = 1;
 	int idBin = 0b01001;
-	char ch = "a";
-	float fl = 2.5;
+	char ch = "a" 1a;
+	1231231231232222222222222225678;
+	abcdefghabcdefghabcdefghabcdefghabcdefghabcdefghabcdefghabcdefgh;
+	abcdefghabcdefghabcdefghabcdefghabcdefghabcdefghabcdefghabcdefgha;
+	float fl = 2.5E+10; //TODO
 	fl = fl + 12 / 4;
 	if (id <= fl || fl > 0xF12A)
 	{
+		"commented string
 		int ch = 123;
 		string;
-	
 	}
 	string 1error;
-}
+"} //TODO 2.5E-10, string eof, eof, int length

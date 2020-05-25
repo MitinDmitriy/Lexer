@@ -1,5 +1,6 @@
 #include "CLexer.h"
 #include <iostream>
+#include <limits.h> 
 
 CLexer::CLexer(std::istream& input, std::ofstream& output)
 	: m_input(input)
@@ -45,6 +46,8 @@ std::string CLexer::GetTokenName(Token token)
 		return "Comment";
 	case TokenType::Error:
 		return "Error";
+	case TokenType::EoF:
+		return "End of File";
 	default:
 		return "unknown type";
 	}
@@ -123,7 +126,8 @@ bool CLexer::IsLetter(std::string string)
 TokenType CLexer::GetTokenType(Token token)
 {
 	std::string s;
-
+	if (token.type == TokenType::EoF)
+		return TokenType::EoF;
 	if (IsKeyword(token.value))
 		return TokenType::Keyword;
 	if (IsArray(token.value))
@@ -195,21 +199,39 @@ TokenType CLexer::GetTokenType(Token token)
 				return TokenType::Hexadecimal;
 		}
 	}
+
 	bool wereDot = false;
+	bool wereE = false;
+	int E = 0;
 	for (int i = 0; i < token.value.length(); i++)
 	{
+		if (wereE)
+			E++;
 		s = token.value[i];
 		if (IsDecimal(s))
 			continue;
 		else if (s == ".")
-			if (wereDot == false)
+			if (wereDot == false && wereE == false)
 				wereDot = true;
 			else
 				return TokenType::Error;
+		else if (s == "E")
+			if (wereE)
+				return TokenType::Error;
+			else
+				wereE = true;
+		else if ((s == "-" || s == "+") && i > 1)
+		{
+			if (!token.value[i - 1] == 'E')
+				return TokenType::Error;
+		}
 		else
 			return TokenType::Error;
 	}
-	if (wereDot)
+
+	if (wereE && E < 2)
+		return TokenType::Error;
+	if (wereDot || wereE)
 		return TokenType::Float;
 	else
 		return TokenType::Integer;
@@ -234,15 +256,22 @@ void CLexer::AddToken(Token token)
 		token.type = GetTokenType(token);
 		if (token.type == TokenType::Identifier && token.value.length() > 64)
 			token.type = TokenType::Error;
-		if (token.type == TokenType::Integer && token.value.length() > 7)
-			token.type = TokenType::Error;
+		if (token.type == TokenType::Integer)
+		{
+			if (token.value.length() > 10)
+				token.type = TokenType::Error;
+			else if (std::stoi(token.value) > INT_MAX)
+				token.type = TokenType::Error;
+		}
 		m_tokens.push_back(token);
 	}
 }
 
 void CLexer::Run()
 {
+
 	int lineNumber = 0;
+	int i = 0;
 	std::string line;
 	bool multiStringComment = false;
 	bool string = false;
@@ -253,8 +282,14 @@ void CLexer::Run()
 		Token token;
 		std::string ch;
 		bool identifier = true;
-		for (int i = 0; i < line.size(); ++i)
+		for (i = 0; i < line.size(); ++i)
 		{
+			if (token.value == "")
+			{
+				token.line = lineNumber;
+				token.position = i + 1;
+			}
+
 			if (i > 0 && !string && !multiStringComment)
 			{
 				if (line[i - 1] == '/' and line[i] == '/')
@@ -264,6 +299,16 @@ void CLexer::Run()
 				}
 			}
 
+			if (i + 1 == line.length() && string && line[i] != '"' && !multiStringComment)
+			{
+				string = false;
+				token.value += line[i];
+				AddToken(token);
+				token.value = "";
+				token.position = i + 1;
+				continue;
+			}
+
 			if (multiStringComment)
 			{
 				if (i > 0)
@@ -271,6 +316,8 @@ void CLexer::Run()
 					{
 						multiStringComment = false;
 					}
+				if (i + 1 == line.size() && !multiStringComment)
+					AddToken(token);
 				continue;
 			}
 
@@ -283,16 +330,13 @@ void CLexer::Run()
 				}
 			}
 
-			if (token.value == "")
-			{
-				token.line = lineNumber;
-				token.position = i + 1;
-			}
-
 			if ((line[i] == ' ' || line[i] == '	') && !string && !multiStringComment)
 			{
 				AddToken(token);
+				token.position = i + 1;
 				token.value = "";
+				if (i + 1 == line.size() && !multiStringComment)
+					AddToken(token);
 				continue;
 			}
 
@@ -306,9 +350,12 @@ void CLexer::Run()
 				{
 					token.value += line[i];
 					AddToken(token);
+					token.position = i + 1;
 					string = false;
 					token.value = "";
 				}
+				if (i + 1 == line.size() && !multiStringComment)
+					AddToken(token);
 				continue;
 			}
 
@@ -316,12 +363,27 @@ void CLexer::Run()
 			{
 				string = true;
 				AddToken(token);
+				token.position = i + 1;
 				token.value = line[i];
+				if (i + 1 == line.size() && !multiStringComment)
+					AddToken(token);
 				continue;
 			}
 
 			ch = line[i];
-			if (IsLetter(ch) || IsDecimal(ch) || ch == "." || ch == "_")
+
+			if ((ch == "-" || ch == "+") && token.value.length() > 0 && identifier == true && !string && !multiStringComment && token.value != "E")
+			{
+				if (token.value[token.value.length() - 1] == 'E')
+				{
+					token.value += line[i];
+					if (i + 1 == line.size() && !multiStringComment)
+						AddToken(token);
+					continue;
+				}
+			}
+
+			if (IsLetter(ch) || IsDecimal(ch) || ch == "." || ch == "_" )
 			{
 				if (identifier)
 				{
@@ -330,6 +392,7 @@ void CLexer::Run()
 				else
 				{
 					AddToken(token);
+					token.position = i + 1;
 					(line[i] == ' ' || line[i] == '	') ? token.value = "" : token.value = line[i];
 					identifier = true;
 				}
@@ -339,6 +402,7 @@ void CLexer::Run()
 				if (identifier)
 				{
 					AddToken(token);
+					token.position = i + 1;
 					if (line[i] == ' ' || line[i] == '	')
 						token.value = "";
 					else
@@ -352,15 +416,23 @@ void CLexer::Run()
 					else
 					{
 						AddToken(token);
+						token.position = i + 1;
 						token.value = "";
 					}
 				}
 			}
 
-			if (i + 1 == line.size() && !string && !multiStringComment)
+			if (i + 1 == line.size() && !multiStringComment)
 				AddToken(token);
 		}
 	}
+
+	Token token;
+	token.value = "EoF";
+	token.type = TokenType::EoF;
+	token.line = lineNumber;
+	token.position = i;
+	AddToken(token);
 
 	PrintTokens();
 }
