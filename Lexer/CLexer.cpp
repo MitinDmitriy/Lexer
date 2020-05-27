@@ -290,6 +290,18 @@ void CLexer::Run()
 				token.position = i + 1;
 			}
 
+			if (!multiStringComment && !string) {
+				if (line[i] == '(' || line[i] == ')') {
+					AddToken(token);
+					token.value = line[i];
+					token.line = lineNumber;
+					token.position = i + 1;
+					AddToken(token);
+					token.value = "";
+					continue;
+				}
+			}
+
 			if (i > 0 && !string && !multiStringComment)
 			{
 				if (line[i - 1] == '/' and line[i] == '/')
