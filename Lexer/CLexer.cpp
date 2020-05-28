@@ -134,6 +134,9 @@ TokenType CLexer::GetTokenType(Token token)
 		return TokenType::Array;
 	if (token.value[0] == '"' && token.value[token.value.length() - 1] == '"')
 		return (token.value.length() == 3) ? TokenType::Char : TokenType::String;
+	if (token.value[0] == '\'' && token.value[token.value.length() - 1] == '\'')
+		if (token.value.length() == 3)
+			return TokenType::Char;
 	if (IsArithmeticalOperator(token.value))
 		return TokenType::ArithmeticOperator;
 	if (IsComparisonOperator(token.value))
@@ -269,7 +272,6 @@ void CLexer::AddToken(Token token)
 
 void CLexer::Run()
 {
-
 	int lineNumber = 0;
 	int i = 0;
 	std::string line;
@@ -278,7 +280,6 @@ void CLexer::Run()
 	while (getline(m_input, line))
 	{
 		lineNumber++;
-		std::string tokenValue;
 		Token token;
 		std::string ch;
 		bool identifier = true;
@@ -311,7 +312,7 @@ void CLexer::Run()
 				}
 			}
 
-			if (i + 1 == line.length() && string && line[i] != '"' && !multiStringComment)
+			if (i + 1 == line.length() && string && (line[i] != '"' || line[i] != '\'') && !multiStringComment)
 			{
 				string = false;
 				token.value += line[i];
@@ -354,7 +355,7 @@ void CLexer::Run()
 
 			if (string && !multiStringComment)
 			{
-				if (line[i] != '"')
+				if (line[i] != '"' && line[i] != '\'')
 				{
 					token.value += line[i];
 				}
@@ -371,7 +372,7 @@ void CLexer::Run()
 				continue;
 			}
 
-			if (line[i] == '"' && !multiStringComment)
+			if ((line[i] == '"' || line[i] == '\'') && !multiStringComment)
 			{
 				string = true;
 				AddToken(token);
